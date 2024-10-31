@@ -1,0 +1,8 @@
+---
+config_host: 172.20.0.4
+config_db: sample
+work_dir: /home/db2inst1/workdir
+py_script: "{{ work_dir }}/get_runtime_config.py"
+db2_instance: db2inst1
+inst_home: "/home/{{ db2_instance }}"
+...

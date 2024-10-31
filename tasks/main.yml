@@ -1,0 +1,76 @@
+---
+- name: Get Configuration - Run only on config_host
+  delegate_to: "{{ config_host }}"
+  run_once: True
+  become: True
+  become_user: "{{ db2_instance }}"
+  block:   
+    - name: create work directory
+      file:
+        path: "{{ work_dir }}"
+        state: directory
+
+    - name: Template Configuration Getter
+      template:
+        src: get_runtime_cfg.py.j2
+        dest: "{{ py_script }}"
+        mode: "0700"
+
+    - name: Get Configuration from Database
+      shell: ". ~/sqllib/db2profile && {{ py_script }}"
+      register: cfg_output
+
+    - name: Convert Output to Ansible dict
+      set_fact:
+        awx_cfg: "{{ cfg_output.stdout | from_json }}"
+  
+    - name: Debug awx_cfg
+      debug:
+        var: awx_cfg
+
+- name: Do something when active configuration found
+  when: awx_cfg[inventory_hostname]['ACTIVE']
+  become: True
+  become_user: "{{ db2_instance }}"
+  block:
+    - name: Copy workfile
+      copy:
+        src: work_with_json.py
+        dest: "/tmp/work_with_json.py"
+        mode: "0700"
+
+    - name: Set fact
+      set_fact:
+        mini_cfg: "{{ awx_cfg[inventory_hostname] | to_json }}"
+
+    - name: Run workload
+      shell: "echo '{{ mini_cfg }}' | /tmp/work_with_json.py"
+      register: wl_output 
+
+    - name: Debug Workload-Output
+      debug:
+        var: wl_output.stdout_lines
+
+    - name: Set Complete Status
+      delegate_to: "{{ config_host }}"
+      shell: "{{ lookup('template', 'update_complete.sh.j2') }}"
+  
+  rescue:
+    - name: Set Failed Status
+      delegate_to: "{{ config_host }}"
+      shell: "{{ lookup('template', 'update_failed.sh.j2') }}"      
+
+
+    
+
+# - name: Do something when active configuration found
+#   when: awx_cfg[inventory_hostname]['ACTIVE']
+#   debug:
+#     msg: "Active Configuration found! {{ awx_cfg[inventory_hostname] }}"
+
+# - name: Tell me when no active configuration was found
+#   when: not awx_cfg[inventory_hostname]['ACTIVE']
+#   debug:
+#     msg: "No Active Configuration found! {{ awx_cfg[inventory_hostname] }}"
+
+...

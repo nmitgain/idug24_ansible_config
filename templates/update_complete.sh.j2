@@ -1,0 +1,7 @@
+. ~/sqllib/db2profile &&
+db2 connect to {{ config_db }} &&
+db2 "update awx.ansible_config set 
+        changed = current timestamp, 
+        action='COMPLETED' 
+        where hostname='{{ inventory_hostname }}'" &&
+db2 terminate

@@ -1,0 +1,34 @@
+#!/usr/bin/python3
+# roles/central_config/templates/Db2Utils.j2
+import ibm_db
+import ibm_db_dbi
+class Db2Con:
+    default_instance = "db2inst1"
+    def __init__(self, dbname, appname, instance=default_instance):
+        # we are local and instance owner with implicit connect
+        # If you need password authentication you probably need to get the password from
+        # a vault
+        connstr = f"dsn=None;DATABASE={dbname};Instance={ instance };PROTOCOL=IPC;"
+        db2ConnDict = {ibm_db.SQL_ATTR_INFO_PROGRAMNAME: appname}
+        try:
+            con = ibm_db.connect(connstr, "", "", db2ConnDict)
+        except Exception:
+            print("no connection:", ibm_db.conn_errormsg())
+            errorCode = ibm_db.conn_error()
+            print("\nSQLSTATE: " + errorCode + "\n")
+        self.__con = con
+    @property
+    def db_con(self): # returns an ibm_db-Connection
+        return self.__con
+    @property
+    def dbi_con(self): # creates a wrapper around ibm_db and returns an ibm_db_dbi-Connection
+        return ibm_db_dbi.Connection(self.__con)
+def to_bool(value):
+    if value.upper() == 'N':
+        return False
+    elif value.upper() == 'Y':
+        return True
+    else:
+        raise ValueError('Invalid value for boolean conversion')  
+{% block body %}
+{% endblock body %}

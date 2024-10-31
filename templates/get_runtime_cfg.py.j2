@@ -1,0 +1,33 @@
+{% extends 'IPCconnector.j2' %}# boring header and connector class
+{% block body %}
+import json
+output = dict()
+def get_ansible_cfg():
+    c = Db2Con("{{ config_db }}", "ansible_config", instance="{{ db2_instance }}")
+    db2_con = c.db_con # returns a Db2-Connection
+    try:
+        sql = """SELECT upper(hostname) hostname, 
+                        upper(src_db) src_db, 
+                        upper(tgt_db) tgt_db, 
+                        upper(version) version, 
+                        active from awx.ansible_config"""
+        result = ibm_db.exec_immediate(db2_con, sql)
+        dictionary = ibm_db.fetch_assoc(result)
+    except Exception:
+        raise
+    while dictionary is not False:   # subsequently collect Data in the output dictionary
+        tgt = dictionary['HOSTNAME'] # using tgt_host as main key 
+        if tgt not in output.keys():
+            host_config = dict()
+            host_config['SRC_DB']= dictionary['SRC_DB']
+            host_config['TGT_DB']= dictionary['TGT_DB']
+            host_config['VERSION']= dictionary['VERSION']
+            host_config['ACTIVE'] = to_bool(dictionary['ACTIVE'])
+            output[tgt] = host_config
+        dictionary = ibm_db.fetch_assoc(result)        
+# Main
+get_ansible_cfg()
+# Print single json-String to STDOUT
+# This has to be the only output or from_json in Ansible will fail!
+print(json.dumps(output))
+{% endblock body %}

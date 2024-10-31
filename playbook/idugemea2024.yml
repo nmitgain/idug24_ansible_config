@@ -1,0 +1,13 @@
+---
+
+- hosts: all
+  gather_facts: no
+  vars:
+    playbook: 
+      name: idugemea24.yml
+      version: "2024103101"
+  tasks:
+    - name: Start role idug24_ansible_config 
+      include_role:
+        name: idug24_ansible_config 
+        tasks_from: main
